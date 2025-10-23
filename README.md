@@ -11,3 +11,7 @@ With these stars we compared their metal content (Fe/H) to several alpha element
 
 Here we see which pairs of alpha elements coorelate with eachother in their anomalies. With expected values being calculated by the probability of how many stars in the dataset fall into both anomalous groups, I compare this to the actual count of of data that fell into each category. We are left with a % change of what elements are anomalous together compared to the random distribution.
 <img width="870" height="545" alt="image" src="https://github.com/user-attachments/assets/9dd7fdf2-9861-49a9-8ac6-d642a4033143" />
+
+expiramented with three dimensional visualizations but didnt end up doingwork heavily with it in this project
+<img width="1072" height="495" alt="image" src="https://github.com/user-attachments/assets/bbb419ce-0b81-450f-b4bd-d8368a8d397e" />
+
