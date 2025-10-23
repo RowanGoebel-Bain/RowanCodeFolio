@@ -1,6 +1,7 @@
 In this project I use data produced by Skycameras of  various Maine cities to train this model on whether auroa borealis is visible in the sky. It is programmed to recieve a live feed from the cameras local to Bethel and deliver an email 
 when Auroras are visible. There have been subsequent iterations of model refining with new training data created by flagging and retraining on its mistakes.
 
+## Clustering Stars by Metallicity
 In this project we draw stellar data LAMOST's data release 9, and inspect the stellar chemistry to anomalous behavior with respect to elemental composition. The code for comparing different alpha elements (C, Ca, N, Ni Mg< Al) is located inclustering2 and anomalous correlations appear in artificial Clusters&result figs.
 
 Heat Map of where data points come from in the sky. These data display the origin of the starts in the dataset.
