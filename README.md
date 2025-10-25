@@ -1,7 +1,8 @@
-Aurora Borealis Detection
-In this project I use data produced by Skycameras of  various Maine cities to train this model on whether auroa borealis is visible in the sky. It is programmed to recieve a live feed from the cameras local to Bethel and deliver an email
-when Auroras are visible. There have been subsequent iterations of model refining with new training data created by flagging and retraining on its mistakes.
-Clustering Stars by Metallicity
+##ML Binary Classification Aurora Borealis Detection
+In this project I use data produced by Skycameras of  various Maine cities to train this model on whether auroa borealis is visible in the sky using tensorflow. It is programmed to recieve a live feed from the cameras local to Bethel and deliver an alert when Auroras are visible. There have been subsequent iterations of model refining with new training data created by flagging and retraining on its mistakes. 99% accuracy was obtained by the recent model.
+
+
+##Clustering Stars by Metallicity
 In this project we draw stellar data LAMOST's data release 9, and inspect the stellar chemistry to anomalous behavior with respect to elemental composition. The code for comparing different alpha elements (C, Ca, N, Ni Mg< Al) is located inclustering2 and anomalous correlations appear in artificial Clusters&result figs.
 <img src="https://github.com/user-attachments/assets/f82e552d-1c23-4a69-86aa-da1c7663a672" alt="image" width="571" height="453" style="float: right; margin-left: 20px; margin-bottom: 20px;">
 Heat Map of where data points come from in the sky. These data display the origin of the starts in the dataset.
