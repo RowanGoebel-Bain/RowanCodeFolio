@@ -93,7 +93,7 @@ def send_notification(subject, message, to_email):
     smtp_server = 'smtp.gmail.com'
     smtp_port = 587
     smtp_username = 'pleverone@mainemineralmuseum.org'
-    smtp_password = 'opera.poetic44'
+    smtp_password = '****'
 
     # Compose the email
     from_email = smtp_username
