@@ -1,171 +1,80 @@
+// app.js – Bain Windows & Doors Supply Chain dApp
 const CONTRACT_ADDRESS = "0x67d06c0F4a20c7CbBd7B3a46F0eFA86d0Ff622F6";
 const ROLES_ADDRESS = "0xd8b934580fcE35a11B58C6D73aDeE468a2833fa8";
 
-const ABI = [
-  "function nextRecipeId() view returns (uint256)",
-  "function traceRecipe(uint256) view returns (tuple(string,string,uint256,address), tuple(string,uint256,address,uint256)[])",
-  "function addSupplier(address) external",
-  "function addChef(address) external",  // Repurpose as addInstaller if needed
-  "function receiveIngredient(string,uint256) external",
-  "function produceRecipe(string,string,uint256[]) external"
-  // Add more if contract updated: e.g., "function markInstalled(uint256) external", "function confirmReceipt(uint256) external"
+const ROLES_ABI = ["function getRole(address) view returns (uint8)"];
+const CONTRACT_ABI = [
+  "function nextProductId() view returns (uint256)",
+  "function products(uint256) view returns (string name, string description, uint8 status, address owner)",
+  "function materials(uint256) view returns (string name, uint256 quantity)",
+  "function receiveMaterial(string name, uint256 quantity)",
+  "function produceProduct(string name, string description, uint256[] materialIds)",
+  "function markInstalled(uint256 productId)",
+  "function confirmReceipt(uint256 productId)",
+  "event MaterialReceived(uint256 id, string name, uint256 quantity)",
+  "event ProductProduced(uint256 id, string name)"
 ];
 
-const ROLES_ABI = ["function getRole(address) view returns (uint8)", "function setRole(address,uint8) external"];
+let provider, signer, contract, rolesContract, userAddress, userRole = 0;
 
-let provider, signer, contract, rolesContract, userRole = 0;
+document.getElementById("connect").addEventListener("click", connectWallet);
+document.getElementById("refresh")?.addEventListener("click", loadProducts);
 
-async function connect() {
-  toggleLoading(true);
+async function connectWallet() {
+  if (!window.ethereum) return alert("MetaMask not detected!");
+  
   try {
-    await ethereum.request({ method: "eth_requestAccounts" });
+    await window.ethereum.request({ method: "eth_requestAccounts" });
     provider = new ethers.providers.Web3Provider(window.ethereum);
     signer = provider.getSigner();
-    const addr = await signer.getAddress();
+    userAddress = await signer.getAddress();
 
-    contract = new ethers.Contract(CONTRACT_ADDRESS, ABI, signer);
-    rolesContract = new ethers.Contract(ROLES_ADDRESS, ROLES_ABI, signer);
-
-    userRole = Number(await rolesContract.getRole(addr));
+    contract = new ethers.Contract(CONTRACT_ADDRESS, CONTRACT_ABI, provider);
+    rolesContract = new ethers.Contract(ROLES_ADDRESS, ROLES_ABI, provider);
+    userRole = Number(await rolesContract.getRole(userAddress));
 
     document.getElementById("account").innerHTML = 
-      `<strong>Connected:</strong> ${addr.slice(0, 10)}...<br><strong>Role:</strong> ${["None", "Admin", "Supplier", "Installer", "Homeowner"][userRole]}`;
+      `Connected: <strong>${userAddress.slice(0,10)}...</strong><br>Role: <strong>${["None","ADMIN","Supplier","Installer","Homeowner"][userRole]}</strong>`;
 
     document.getElementById("contractSection").classList.remove("hidden");
-    showRolePanels(userRole);
-    loadAllProducts();
-  } catch (error) {
-    console.error(error);
-    alert("Error connecting to wallet.");
-  } finally {
-    toggleLoading(false);
+    showPanels();
+    loadProducts();
+  } catch (err) {
+    alert("Connection failed: " + err.message);
   }
 }
 
-function showRolePanels(role) {
-  document.querySelectorAll(".role-section").forEach(el => el.style.display = "none");
-  if (role === 1) document.getElementById("adminPanel").style.display = "block";
-  if (role === 2) document.getElementById("supplierPanel").style.display = "block";
-  if (role === 3) document.getElementById("installerPanel").style.display = "block";
-  if (role === 4) document.getElementById("homeownerPanel").style.display = "block";
+function showPanels() {
+  document.querySelectorAll(".role-section").forEach(p => p.classList.add("hidden"));
+  if (userRole === 1) document.getElementById("adminPanel").classList.remove("hidden");
+  if (userRole === 2) document.getElementById("supplierPanel").classList.remove("hidden");
+  if (userRole === 3) document.getElementById("installerPanel").classList.remove("hidden");
+  if (userRole === 4) document.getElementById("homeownerPanel").classList.remove("hidden");
 }
 
-async function loadAllProducts() {
-  const div = document.getElementById("products");
-  div.innerHTML = "";
-  toggleLoading(true);
+async function loadProducts() {
+  const list = document.getElementById("products");
+  list.innerHTML = "Loading…";
   try {
-    const n = await contract.nextRecipeId();
-    if (n.eq(0)) return div.innerHTML = "No products available yet.";
-
+    const nextId = await contract.nextProductId();
+    if (nextId.eq(0)) { list.innerHTML = "No products yet."; return; }
     let html = "";
-    for (let i = 1; i <= n; i++) {
-      const [product, materials] = await contract.traceRecipe(i);
-      html += `
-        <div class="product">
-          <h2>${product.recipeName}</h2>  <!-- Rename to productName in contract if possible -->
-          <p>${product.description}</p>
-          <h4>Materials:</h4>
-          <ul>
-            ${materials.map(m => `<li>${m[0]} (${m[1]} units) - Supplier: ${m[2].slice(0,10)}... - Timestamp: ${new Date(Number(m[3]) * 1000).toLocaleString()}</li>`).join('')}
-          </ul>
-        </div>
-      `;
+    for (let i = 1; i < nextId; i++) {
+      const p = await contract.products(i);
+      html += `<div class="product"><h3>Product #${i}: ${p.name}</h3><p>${p.description}</p><p>Status: ${["Received","Produced","Installed","Delivered"][p.status]}</p></div>`;
     }
-    div.innerHTML = html || "No products found.";
-  } catch (e) {
-    console.error(e);
-    div.innerHTML = "Error loading products.";
-  } finally {
-    toggleLoading(false);
-  }
+    list.innerHTML = html || "No products found.";
+  } catch { list.innerHTML = "Error loading products"; }
 }
 
+// Quick admin assign (you’ll use this next)
 async function assignRole() {
   const addr = document.getElementById("roleAddr").value;
   const role = document.getElementById("roleNum").value;
-  try {
-    const tx = await rolesContract.setRole(addr, role);
-    await tx.wait();
-    alert("Role assigned!");
-  } catch (e) {
-    alert("Error assigning role: " + e.message);
-  }
+  const rolesWithSigner = new ethers.Contract(ROLES_ADDRESS, ["function setRole(address,uint8) external"], signer);
+  await (await rolesWithSigner.setRole(addr, role)).wait();
+  alert("Role assigned!");
 }
 
-async function receiveMaterial() {
-  const name = document.getElementById("materialName").value;
-  const qty = document.getElementById("materialQty").value;
-  try {
-    const tx = await contract.receiveIngredient(name, qty);
-    await tx.wait();
-    alert("Material received!");
-    loadAllProducts();
-  } catch (e) {
-    alert("Error: " + e.message);
-  }
-}
-
-async function produceProduct() {
-  const name = document.getElementById("productName").value;
-  const desc = document.getElementById("productDesc").value;
-  const ids = document.getElementById("materialIds").value.split(",").map(id => parseInt(id.trim()));
-  try {
-    const tx = await contract.produceRecipe(name, desc, ids);
-    await tx.wait();
-    alert("Product produced!");
-    loadAllProducts();
-  } catch (e) {
-    alert("Error: " + e.message);
-  }
-}
-
-// Placeholder for Installer (add to contract if needed)
-async function markInstalled() {
-  const id = document.getElementById("productIdInstall").value;
-  // Assuming contract has markInstalled(uint256)
-  try {
-    const tx = await contract.markInstalled(id);
-    await tx.wait();
-    alert("Installation marked!");
-    loadAllProducts();
-  } catch (e) {
-    alert("Error: " + e.message);
-  }
-}
-
-// Placeholder for Homeowner (add to contract if needed)
-async function confirmReceipt() {
-  const id = document.getElementById("productIdConfirm").value;
-  // Assuming contract has confirmReceipt(uint256)
-  try {
-    const tx = await contract.confirmReceipt(id);
-    await tx.wait();
-    alert("Receipt confirmed!");
-    loadAllProducts();
-  } catch (e) {
-    alert("Error: " + e.message);
-  }
-}
-
-async function produceVictoryProduct() {
-  try {
-    // Hardcode a sample: e.g., assume material IDs [1,2] exist
-    const tx = await contract.produceRecipe("Victory Window", "Premium window with 1000x frames", [1, 2]);  // Adjust IDs
-    await tx.wait();
-    alert("Victory product produced!");
-    loadAllProducts();
-  } catch (e) {
-    alert("Error: " + e.message);
-  }
-}
-
-function toggleLoading(isLoading) {
-  const spinner = document.getElementById("loadingSpinner");
-  const productsDiv = document.getElementById("products");
-  spinner.style.display = isLoading ? "block" : "none";
-  productsDiv.style.display = isLoading ? "none" : "block";
-}
-
-document.getElementById("connect").onclick = connect;
-document.getElementById("refresh").onclick = loadAllProducts;
+// Hook up buttons
+document.getElementById("victoryBtn")?.addEventListener("click", () => alert("Victory! (demo button)"));
